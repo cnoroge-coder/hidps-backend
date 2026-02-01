@@ -1,9 +1,9 @@
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 import { handleAgent } from './agentHandler.js';
 import { handleFrontend } from './frontendHandler.js';
 
 export function startWebSocketServer(server) {
-  const wss = new WebSocket.Server({ server });
+  const wss = new WebSocketServer({ server });
 
   wss.on('connection', (ws, req) => {
     ws.once('message', msg => {
