@@ -1,20 +1,23 @@
+// src/alerts/alertService.js
 import { supabase } from '../config/supabase.js';
-import { evaluate } from './ruleEngine.js';
+import { evaluateLog } from './ruleEngine.js';
 import { sendAlertEmails } from '../email/mailer.js';
 
-export async function processAgentEvent(agentId, event) {
-  const alert = evaluate(event);
+export async function processAgentLog(agentId, log) {
+  const alert = evaluateLog(log);
   if (!alert) return;
 
-  const { data } = await supabase
+  const { data: createdAlert } = await supabase
     .from('alerts')
     .insert({
       agent_id: agentId,
-      ...alert
+      title: alert.title,
+      message: alert.message,
+      severity: alert.severity,
+      alert_type: alert.alert_type
     })
     .select()
     .single();
 
-  await sendAlertEmails(agentId, data);
-  // Emit to connected frontends (left as exercise)
+  await sendAlertEmails(agentId, createdAlert);
 }
