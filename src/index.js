@@ -2,6 +2,11 @@ import express from 'express';
 import http from 'http';
 import { startWebSocketServer } from './websocket/server.js';
 import dotenv from 'dotenv';
+import { startMockAgent } from './mock/mockAgent.js';
+
+if (process.env.MOCK_AGENT === 'true') {
+  startMockAgent('agent_001');
+}
 
 dotenv.config();
 

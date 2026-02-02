@@ -7,17 +7,25 @@ export async function processAgentLog(agentId, log) {
   const alert = evaluateLog(log);
   if (!alert) return;
 
-  const { data: createdAlert } = await supabase
+  const { data: created } = await supabase
     .from('alerts')
     .insert({
       agent_id: agentId,
-      title: alert.title,
-      message: alert.message,
-      severity: alert.severity,
-      alert_type: alert.alert_type
+      ...alert
     })
     .select()
     .single();
 
-  await sendAlertEmails(agentId, createdAlert);
+  const { data: users } = await supabase
+    .from('agent_users')
+    .select('user_id')
+    .eq('agent_id', agentId);
+
+  for (const { user_id } of users) {
+    emitToUser(user_id, {
+      event: 'alert_created',
+      data: created
+    });
+  }
+  await sendAlertEmails(agentId, created);
 }
