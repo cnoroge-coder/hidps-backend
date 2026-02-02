@@ -54,17 +54,27 @@ async function analyzeLog(agentId, log) {
     }
   }
 
-  // 5. Detect monitored file change
-  if (type === 'file_monitoring') {
-    if (message.includes('MODIFY')) {
+  if (type === 'login' && service === 'sudo') {
+    if (message.includes('session opened for user root')) {
       await createAlert(
-        agentId,
-        'Monitored File Modified',
-        `A monitored file was modified: ${message}`,
-        'file_monitoring',
-        2
+        agentId, 
+        'Root Session Opened', 
+        `Root session opened: ${message}`, 
+        'security', 
+        3
       );
     }
+  }
+
+  // 5. Detect monitored file change
+  if (type === 'file_monitoring') {
+    await createAlert(
+      agentId,
+      'Monitored File Modified',
+      `A monitored file was modified: ${message}`,
+      'file_monitoring',
+      2
+    );
   }
 }
 
