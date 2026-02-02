@@ -41,7 +41,7 @@ async function updateAgentStats(agentId, stats) {
 }
 
 // Helper to create an alert
-async function createAlert(agentId, title, message, type, severity = 'medium') {
+async function createAlert(agentId, title, message, type, severity = 2) {
   const { error } = await supabase
     .from('alerts')
     .insert({

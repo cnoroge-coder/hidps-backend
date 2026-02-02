@@ -14,7 +14,7 @@ async function analyzeLog(agentId, log) {
         'Failed SSH Login Attempt', 
         `Multiple failed login attempts detected: ${message}`, 
         'security', 
-        'high'
+        3
       );
     }
   }
@@ -27,7 +27,7 @@ async function analyzeLog(agentId, log) {
         'Critical System File Modified',
         `A critical system file was modified: ${message}`,
         'integrity',
-        'critical'
+        4
       );
     }
   }
@@ -37,7 +37,33 @@ async function analyzeLog(agentId, log) {
     if (message.includes('BLOCK')) {
       // Logic to avoid spamming alerts for every packet could be added here
       // For now, we log it or create a low severity alert
-      await createAlert(agentId, 'Firewall Block', message, 'network', 'low');
+      await createAlert(agentId, 'Firewall Block', message, 'network', 1);
+    }
+  }
+
+  // 4. Detect new processes involving sudo (Privilege Escalation indicators)
+  if (type === 'process') {
+    if (message.includes('sudo')) {
+      await createAlert(
+        agentId,
+        'Sudo Command Executed',
+        `A command was executed with sudo: ${message}`,
+        'privilege_escalation',
+        2
+      );
+    }
+  }
+
+  // 5. Detect monitored file change
+  if (type === 'file_monitoring') {
+    if (message.includes('MODIFY')) {
+      await createAlert(
+        agentId,
+        'Monitored File Modified',
+        `A monitored file was modified: ${message}`,
+        'file_monitoring',
+        2
+      );
     }
   }
 }

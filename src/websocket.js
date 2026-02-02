@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const url = require('url');
-const { setAgentOnline, updateAgentStats } = require('./supabase');
+const { setAgentOnline, updateAgentStats, createAlert } = require('./supabase');
 const { analyzeLog } = require('./detector');
 
 // Map to store active agent connections: agent_id -> WebSocket
@@ -28,6 +28,28 @@ function setupWebSocketServer(server) {
 
           // Case A: System Stats Report
           if (data.type === 'agent_stats') {
+            // Generate alert if CPU or RAM usage is critically high
+            const cpuUsage = data.data.cpu_usage;
+            const ramUsage = data.data.ram_usage;
+            
+            if (cpuUsage >= 90) {
+              await createAlert(
+                agentId,
+                'High CPU Usage',
+                `CPU usage is critically high at ${cpuUsage}%`,
+                'system',
+                3
+              );
+            }
+            if (ramUsage >= 90) {
+              await createAlert(
+                agentId,
+                'High RAM Usage',
+                `RAM usage is critically high at ${ramUsage}%`,
+                'system',
+                3
+              );
+            }
             await updateAgentStats(agentId, data.data);
           } 
           // Case B: Log Event
@@ -35,7 +57,15 @@ function setupWebSocketServer(server) {
             // 1. Run detection logic
             analyzeLog(agentId, data);
             
-            // 2. Stream to Frontend (Live Logs)
+            // 2. Ignore process logs for sleep and cpuUsage to reduce noise
+            if (data.type === 'process' && 
+                (data.message.includes('sleep') || data.message.includes('cpuUsage') || data.message.includes('kworker'))) {
+              return;
+            }
+
+            // Debug: Show received log
+            console.log(`Log from ${agentId}:`, data);
+            // 3. Stream to Frontend (Live Logs)
             broadcastToFrontends({
               type: 'log_stream',
               agent_id: agentId,
