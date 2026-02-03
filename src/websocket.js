@@ -80,9 +80,6 @@ function setupWebSocketServer(server) {
                 (data.message.includes('sleep') || data.message.includes('cpuUsage') || data.message.includes('kworker'))) {
               return;
             }
-
-            // Debug: Show received log
-            console.log(`Log from ${agentId}:`, data);
             // 3. Stream to Frontend (Live Logs)
             broadcastToFrontends({
               type: 'log_stream',
