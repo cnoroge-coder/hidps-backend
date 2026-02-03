@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const url = require('url');
-const { setAgentOnline, updateAgentStats, createAlert } = require('./supabase');
+const { supabase, setAgentOnline, updateAgentStats, createAlert } = require('./supabase');
 const { analyzeLog } = require('./detector');
 
 // Map to store active agent connections: agent_id -> WebSocket
@@ -27,7 +27,7 @@ function setupWebSocketServer(server) {
           const data = JSON.parse(message);
 
           // Case A: System Stats Report
-          if (data.type === 'agent_stats') {
+          if (data.type === 'agent_report') {
             // Generate alert if CPU or RAM usage is critically high
             const cpuUsage = data.data.cpu_usage;
             const ramUsage = data.data.ram_usage;
@@ -51,8 +51,26 @@ function setupWebSocketServer(server) {
               );
             }
             await updateAgentStats(agentId, data.data);
-          } 
-          // Case B: Log Event
+            await supabase
+              .from('agents')
+              .update({ firewall_enabled: data.data.firewall_enabled })
+              .eq('id', agentId);
+
+            // 2. Broadcast to frontend so UI shows current rules/status
+            broadcastToFrontends({
+                type: 'firewall_sync',
+                agent_id: agentId,
+                rules: data.data.firewall_rules,
+                enabled: data.data.firewall_enabled
+            });
+          }
+          else if (data.type === 'firewall_update') {
+            broadcastToFrontends({
+                type: 'firewall_rules_updated',
+                agent_id: agentId,
+                rules: data.rules
+            });
+          }
           else {
             // 1. Run detection logic
             analyzeLog(agentId, data);
@@ -88,6 +106,15 @@ function setupWebSocketServer(server) {
     else if (userId) {
       console.log(`Frontend User connected: ${userId}`);
       frontends.add(ws);
+      
+      ws.on('message', (message) => {
+        const data = JSON.parse(message);
+
+        if (data.type === 'frontend_command') {
+          // Forward UI requests to add/delete rules to the specific agent
+          sendCommandToAgent(data.agent_id, data.command, data.payload);
+        }      
+      });
 
       ws.on('close', () => {
         frontends.delete(ws);

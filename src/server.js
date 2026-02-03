@@ -12,20 +12,20 @@ const { agents } = setupWebSocketServer(server);
 // --- SUPABASE REALTIME LISTENERS ---
 
 // 1. Listen for Firewall Toggles
-// When Frontend updates 'agent_stats' -> Backend sees it -> Commands Agent
+// When Frontend updates 'agents' -> Backend sees it -> Commands Agent
 supabase
   .channel('public:agents')
   .on(
     'postgres_changes',
     { event: 'UPDATE', schema: 'public', table: 'agents' },
     (payload) => {
-      const { agent_id, firewall_enabled } = payload.new;
+      const { id, firewall_enabled } = payload.new;
       const oldState = payload.old.firewall_enabled;
 
       // Only send command if state actually changed
       if (firewall_enabled !== oldState) {
-        console.log(`State change detected for ${agent_id}: Firewall -> ${firewall_enabled}`);
-        sendCommandToAgent(agent_id, 'toggle_firewall', { enabled: firewall_enabled });
+        console.log(`State change detected for ${id}: Firewall -> ${firewall_enabled}`);
+        sendCommandToAgent(id, 'toggle_firewall', { enabled: firewall_enabled });
       }
     }
   )
