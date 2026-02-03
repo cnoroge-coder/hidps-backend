@@ -14,10 +14,10 @@ const { agents } = setupWebSocketServer(server);
 // 1. Listen for Firewall Toggles
 // When Frontend updates 'agent_stats' -> Backend sees it -> Commands Agent
 supabase
-  .channel('public:agent_stats')
+  .channel('public:agents')
   .on(
     'postgres_changes',
-    { event: 'UPDATE', schema: 'public', table: 'agent_stats' },
+    { event: 'UPDATE', schema: 'public', table: 'agents' },
     (payload) => {
       const { agent_id, firewall_enabled } = payload.new;
       const oldState = payload.old.firewall_enabled;
