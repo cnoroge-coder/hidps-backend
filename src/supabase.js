@@ -20,11 +20,24 @@ async function setAgentOnline(agentId, isOnline) {
     .update({
       is_online: isOnline,
       last_seen: isOnline ? new Date() : undefined,
+
     })
     .eq('id', agentId);
 
-  if (error)
+  if (error){
     console.error(`Error updating agent ${agentId} status:`, error.message);
+  }
+
+  const { error2 } = await supabase
+    .from('agent_stats')
+    .update({
+      is_installed: true,
+    })
+    .eq('agent_id', agentId);
+
+  if (error2){
+    console.error(`Error updating agent ${agentId} :`, error2.message);
+  }
 }
 
 // Helper to update system stats (CPU/RAM)
@@ -85,9 +98,9 @@ async function createAlert(agentId, title, message, type, severity = 2) {
   
       // 2. Consolidate User IDs
       const userIds = new Set([agent.owner_id]);
-      if (users && users.length > 0) {
-        users.forEach(u => userIds.add(u.user_id));
-      }
+      // if (users && users.length > 0) {
+      //   users.forEach(u => userIds.add(u.user_id));
+      // }
   
       // 3. Fetch User Emails using the Auth Admin API
       const { data: { users: allUsers }, error} = await supabase.auth.admin.listUsers();

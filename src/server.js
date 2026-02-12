@@ -22,7 +22,9 @@ supabase
       const { id, firewall_enabled } = payload.new;
       const oldState = payload.old.firewall_enabled;
 
+      if (oldState === undefined) return; // Initial NULL state on first insert
       // Only send command if state actually changed
+      console.log("Payload received for agent update:", payload);
       if (firewall_enabled !== oldState) {
         console.log(`State change detected for ${id}: Firewall -> ${firewall_enabled}`);
         sendCommandToAgent(id, 'toggle_firewall', { enabled: firewall_enabled });

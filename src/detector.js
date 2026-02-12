@@ -37,7 +37,7 @@ async function analyzeLog(agentId, log) {
     if (message.includes('BLOCK')) {
       // Logic to avoid spamming alerts for every packet could be added here
       // For now, we log it or create a low severity alert
-      await createAlert(agentId, 'Firewall Block', message, 'network', 1);
+      // await createAlert(agentId, 'Firewall Block', message, 'network', 1);
     }
   }
 

@@ -32,15 +32,15 @@ function setupWebSocketServer(server) {
             const cpuUsage = data.data.cpu_usage;
             const ramUsage = data.data.ram_usage;
             
-            if (cpuUsage >= 90) {
-              await createAlert(
-                agentId,
-                'High CPU Usage',
-                `CPU usage is critically high at ${cpuUsage}%`,
-                'system',
-                3
-              );
-            }
+            // if (cpuUsage >= 90) {
+            //   await createAlert(
+            //     agentId,
+            //     'High CPU Usage',
+            //     `CPU usage is critically high at ${cpuUsage}%`,
+            //     'system',
+            //     3
+            //   );
+            // }
             if (ramUsage >= 90) {
               await createAlert(
                 agentId,
