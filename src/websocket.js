@@ -86,11 +86,23 @@ function setupWebSocketServer(server) {
               severity
             );
             
-            // Broadcast to frontend
+            // Broadcast alert to frontend
             broadcastToFrontends({
               type: 'new_alert',
               agent_id: agentId,
               alert: alertData
+            });
+
+            // Also broadcast as log entry for consistency
+            broadcastToFrontends({
+              type: 'log_stream',
+              agent_id: agentId,
+              log: {
+                type: alertData.alert_type,
+                service: 'alert_system',
+                message: `[ALERT] ${alertData.title}: ${alertData.description}`,
+                timestamp: new Date().toISOString()
+              }
             });
           }
           else if (data.type === 'firewall_update') {
