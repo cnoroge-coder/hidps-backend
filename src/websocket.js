@@ -64,6 +64,35 @@ function setupWebSocketServer(server) {
                 enabled: data.data.firewall_enabled
             });
           }
+          // Case B: Alert from agent
+          else if (data.type === 'alert') {
+            const alertData = data.alert_data;
+            console.log(`Received alert from agent ${agentId}:`, alertData.title);
+            
+            // Map severity to numeric value
+            const severityMap = {
+              'info': 1,
+              'warning': 2,
+              'critical': 3
+            };
+            const severity = severityMap[alertData.severity] || 1;
+            
+            // Create alert in database
+            await createAlert(
+              agentId,
+              alertData.title,
+              alertData.description,
+              alertData.alert_type,
+              severity
+            );
+            
+            // Broadcast to frontend
+            broadcastToFrontends({
+              type: 'new_alert',
+              agent_id: agentId,
+              alert: alertData
+            });
+          }
           else if (data.type === 'firewall_update') {
             broadcastToFrontends({
                 type: 'firewall_rules_updated',
