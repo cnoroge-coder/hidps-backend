@@ -15,16 +15,70 @@ const supabase = createClient(
 
 // Helper to update agent online status
 async function setAgentOnline(agentId, isOnline) {
+  // First, check if agent exists
+  const { data: existingAgent, error: selectError } = await supabase
+    .from('agents')
+    .select('id')
+    .eq('id', agentId)
+    .single();
+
+  if (selectError && selectError.code !== 'PGRST116') { // PGRST116 is "not found"
+    console.error(`Error checking agent ${agentId}:`, selectError.message);
+    return;
+  }
+
+  if (!existingAgent) {
+    // Agent doesn't exist, try to auto-register it
+    console.log(`Auto-registering new agent: ${agentId}`);
+    
+    // Get the first user as default owner
+    const { data: firstUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1)
+      .single();
+
+    if (userError) {
+      console.error(`Error getting default user for agent ${agentId}:`, userError.message);
+      return;
+    }
+
+    // Insert the agent
+    const { error: insertError } = await supabase
+      .from('agents')
+      .insert({
+        id: agentId,
+        name: `Agent ${agentId.slice(0, 8)}`, // Use first 8 chars of ID as name
+        owner_id: firstUser.id,
+      });
+
+    if (insertError) {
+      console.error(`Error auto-registering agent ${agentId}:`, insertError.message);
+      return;
+    }
+
+    // Also insert into agent_stats
+    const { error: statsError } = await supabase
+      .from('agent_stats')
+      .insert({
+        agent_id: agentId,
+      });
+
+    if (statsError) {
+      console.error(`Error creating stats for agent ${agentId}:`, statsError.message);
+    }
+  }
+
+  // Now update the agent status
   const { error } = await supabase
     .from('agents')
     .update({
       is_online: isOnline,
       last_seen: isOnline ? new Date() : undefined,
-
     })
     .eq('id', agentId);
 
-  if (error){
+  if (error) {
     console.error(`Error updating agent ${agentId} status:`, error.message);
   }
 
@@ -35,8 +89,8 @@ async function setAgentOnline(agentId, isOnline) {
     })
     .eq('agent_id', agentId);
 
-  if (error2){
-    console.error(`Error updating agent ${agentId} :`, error2.message);
+  if (error2) {
+    console.error(`Error updating agent ${agentId}:`, error2.message);
   }
 }
 
