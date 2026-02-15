@@ -28,7 +28,13 @@ async function setAgentOnline(agentId, isOnline) {
   }
 
   if (!existingAgent) {
-    // Agent doesn't exist, try to auto-register it
+    // Agent doesn't exist, try to auto-register it (only for valid UUIDs)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(agentId)) {
+      console.error(`Cannot auto-register agent ${agentId}: not a valid UUID`);
+      return;
+    }
+    
     console.log(`Auto-registering new agent: ${agentId}`);
     
     // Get the first user as default owner
