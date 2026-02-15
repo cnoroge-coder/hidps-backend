@@ -123,9 +123,9 @@ async function analyzeLog(agentId, log) {
   const { type, service, message } = log;
   console.log(`Analyzing log: type=${type}, service=${service}, message=${message.substring(0, 100)}`);
 
-  // 1. Detect Failed SSH Logins (Brute Force indicators)
-  if (type === 'login' && service === 'sshd') {
-    console.log('Detected SSH login log');
+  // 1. Detect SSH Login/Logout events
+  if ((type === 'login' || type === 'logout') && service === 'sshd') {
+    console.log(`Detected SSH ${type} log`);
     if (message.includes('Failed') || message.includes('authentication failure')) {
       console.log('Creating failed SSH alert');
       await createAlert(
@@ -142,6 +142,15 @@ async function analyzeLog(agentId, log) {
         'Successful SSH Login',
         `SSH login successful: ${message}`,
         'auth_success',
+        1
+      );
+    } else if (type === 'logout') {
+      console.log('Creating SSH logout alert');
+      await createAlert(
+        agentId,
+        'SSH Logout',
+        `SSH session ended: ${message}`,
+        'auth_logout',
         1
       );
     }
