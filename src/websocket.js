@@ -69,6 +69,23 @@ function setupWebSocketServer(server) {
                 enabled: data.data.firewall_enabled
             });
           }
+          else if (data.type === 'alert') {
+            // Handle security alerts from agents
+            await createAlert(
+              agentId,
+              data.title,
+              data.message,
+              data.alert_type,
+              data.severity === 'high' ? 4 : data.severity === 'medium' ? 3 : 2
+            );
+
+            // Broadcast alert to frontend
+            broadcastToFrontends({
+              type: 'security_alert',
+              agent_id: agentId,
+              alert: data
+            });
+          }
           else if (data.type === 'firewall_update') {
             broadcastToFrontends({
                 type: 'firewall_rules_updated',
