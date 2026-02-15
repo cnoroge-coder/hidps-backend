@@ -34,29 +34,16 @@ async function setAgentOnline(agentId, isOnline) {
       console.error(`Cannot auto-register agent ${agentId}: not a valid UUID`);
       return;
     }
-    
+
     console.log(`Auto-registering new agent: ${agentId}`);
-    
-    // Get the first user as default owner
-    const { data: firstUser, error: userError } = await supabase
-      .schema('auth')
-      .from('users')
-      .select('id')
-      .limit(1)
-      .single();
 
-    if (userError) {
-      console.error(`Error getting default user for agent ${agentId}:`, userError.message);
-      return;
-    }
-
-    // Insert the agent
+    // Insert the agent without owner (nullable owner_id)
     const { error: insertError } = await supabase
       .from('agents')
       .insert({
         id: agentId,
         name: `Agent ${agentId.slice(0, 8)}`, // Use first 8 chars of ID as name
-        owner_id: firstUser.id,
+        // owner_id is nullable, so we don't set it for auto-registered agents
       });
 
     if (insertError) {
