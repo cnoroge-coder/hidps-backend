@@ -15,7 +15,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev" : "node --watch --env-file=.env src/server.js"
+    "dev": "node --watch --env-file=.env src/server.js",
+    "build": "npm install && node src/migrate.js",
+    "migrate": "node src/migrate.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",

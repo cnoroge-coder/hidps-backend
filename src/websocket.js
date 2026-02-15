@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const url = require('url');
-const { supabase, setAgentOnline, updateAgentStats, createAlert } = require('./supabase');
+const { supabase, handleAgentConnection, updateAgentStats, createAlert } = require('./supabase');
 const { analyzeLog } = require('./detector');
 
 // Map to store active agent connections: agent_id -> WebSocket
@@ -20,7 +20,12 @@ function setupWebSocketServer(server) {
     if (agentId) {
       console.log(`Agent connected: ${agentId}`);
       agents.set(agentId, ws);
-      await setAgentOnline(agentId, true);
+      const success = await handleAgentConnection(agentId);
+      if (!success) {
+        console.error(`Failed to register agent ${agentId}`);
+        ws.close();
+        return;
+      }
 
       ws.on('message', async (message) => {
         try {
