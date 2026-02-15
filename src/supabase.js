@@ -39,7 +39,7 @@ async function setAgentOnline(agentId, isOnline) {
     
     // Get the first user as default owner
     const { data: firstUser, error: userError } = await supabase
-      .from('users')
+      .from('auth.users')
       .select('id')
       .limit(1)
       .single();
