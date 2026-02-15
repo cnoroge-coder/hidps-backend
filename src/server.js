@@ -122,3 +122,7 @@ const HOST = '0.0.0.0';
 server.listen(PORT, HOST, () => {
   console.log(`HIDPS Backend and WebSocket server listening on port ${PORT}`);
 });
+}).catch((error) => {
+  console.error('Failed to initialize database:', error);
+  process.exit(1);
+});
