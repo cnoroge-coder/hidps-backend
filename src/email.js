@@ -1,25 +1,28 @@
-const nodemailer = require('nodemailer');
 require('dotenv').config();
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 async function sendEmail(to, subject, text) {
   try {
-    const info = await transporter.sendMail({
-      from: `"HIDPS Alert" <${process.env.EMAIL_FROM}>`,
-      to,
-      subject,
-      text,
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY || 'sF0jECvhIqT8pYx6',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { email: process.env.EMAIL_FROM },
+        to: [{ email: to }],
+        subject,
+        htmlContent: text,
+      }),
     });
-    console.log(`Email sent to ${to}: ${info.messageId}`);
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`Email sent to ${to}: ${data.messageId || 'Success'}`);
+    } else {
+      const error = await response.text();
+      console.error(`Error sending email to ${to}: ${response.status} ${error}`);
+    }
   } catch (error) {
     console.error(`Error sending email to ${to}:`, error);
   }
