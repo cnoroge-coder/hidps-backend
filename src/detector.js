@@ -121,37 +121,16 @@ function shouldCreateFileAlert(message, monitoredFile) {
  */
 async function analyzeLog(agentId, log) {
   const { type, service, message } = log;
-  console.log(`Analyzing log: type=${type}, service=${service}, message=${message.substring(0, 100)}`);
 
-  // 1. Detect SSH Login/Logout events
-  if ((type === 'login' || type === 'logout') && service === 'sshd') {
-    console.log(`Detected SSH ${type} log`);
-    if (message.includes('Failed') || message.includes('authentication failure')) {
-      console.log('Creating failed SSH alert');
+  // 1. Detect Failed SSH Logins (Brute Force indicators)
+  if (type === 'login' && service === 'sshd') {
+    if (message.includes('Failed password') || message.includes('authentication failure')) {
       await createAlert(
         agentId, 
         'Failed SSH Login Attempt', 
-        `SSH login failed: ${message}`, 
-        'auth_failure', 
+        `Multiple failed login attempts detected: ${message}`, 
+        'security', 
         3
-      );
-    } else if (message.includes('Successful') || message.includes('Accepted')) {
-      console.log('Creating successful SSH alert');
-      await createAlert(
-        agentId,
-        'Successful SSH Login',
-        `SSH login successful: ${message}`,
-        'auth_success',
-        1
-      );
-    } else if (type === 'logout') {
-      console.log('Creating SSH logout alert');
-      await createAlert(
-        agentId,
-        'SSH Logout',
-        `SSH session ended: ${message}`,
-        'auth_logout',
-        1
       );
     }
   }

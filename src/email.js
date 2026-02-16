@@ -1,45 +1,27 @@
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-async function sendEmail(to, subject, htmlContent, textContent = '') {
-  if (!process.env.BREVO_API_KEY) {
-    throw new Error('BREVO_API_KEY is missing in environment variables');
-  }
-  if (!process.env.EMAIL_FROM) {
-    throw new Error('EMAIL_FROM is missing in environment variables');
-  }
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
+async function sendEmail(to, subject, text) {
   try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'api-key': process.env.BREVO_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { 
-          email: process.env.EMAIL_FROM,
-          name: 'HIDPS Security Alerts'  // Optional but recommended
-        },
-        to: [{ email: to }],
-        subject,
-        htmlContent,
-        textContent: textContent || htmlContent.replace(/<[^>]+>/g, ''), // fallback
-      }),
+    const info = await transporter.sendMail({
+      from: `"HIDPS Alert" <${process.env.EMAIL_FROM}>`,
+      to,
+      subject,
+      text,
     });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`Email sent to ${to} → Message ID: ${data.messageId || 'Success'}`);
-      return { success: true, messageId: data.messageId };
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Brevo error ${response.status}:`, errorData.message || await response.text());
-      return { success: false, error: errorData.message || 'Unknown error' };
-    }
+    console.log(`Email sent to ${to}: ${info.messageId}`);
   } catch (error) {
-    console.error(`Network/Unexpected error sending email to ${to}:`, error);
-    return { success: false, error: error.message };
+    console.error(`Error sending email to ${to}:`, error);
   }
 }
 

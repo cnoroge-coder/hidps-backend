@@ -13,92 +13,53 @@ const supabase = createClient(
   }
 );
 
-// Helper to handle agent connections and auto-registration
-async function handleAgentConnection(agentId) {
-  try {
-    // STEP 1: Create/register agent in database if it doesn't exist
-    const { data: existingAgent, error: checkError } = await supabase
-      .from('agents')
-      .select('id')
-      .eq('id', agentId)
-      .single();
+// Helper to update agent online status
+async function setAgentOnline(agentId, isOnline) {
+  const { error } = await supabase
+    .from('agents')
+    .update({
+      is_online: isOnline,
+      last_seen: isOnline ? new Date() : undefined,
 
-    if (checkError && checkError.code === 'PGRST116') {
-      // Agent doesn't exist, create it (only for valid UUIDs)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(agentId)) {
-        console.error(`Cannot auto-register agent ${agentId}: not a valid UUID`);
-        return false;
-      }
+    })
+    .eq('id', agentId);
 
-      const { data, error } = await supabase
-        .from('agents')
-        .insert([{
-          id: agentId,
-          name: `Agent ${agentId.slice(0, 8)}`,
-          is_online: true,
-          last_seen: new Date().toISOString()
-        }])
-        .select();
+  if (error){
+    console.error(`Error updating agent ${agentId} status:`, error.message);
+  }
 
-      if (error) {
-        console.error(`Error creating agent ${agentId}:`, error);
-        return false;
-      }
-      console.log(`✅ Auto-registering new agent: ${agentId}`);
-    } else if (checkError) {
-      console.error(`Error checking agent ${agentId}:`, checkError);
-      return false;
-    }
+  const { error2 } = await supabase
+    .from('agent_stats')
+    .update({
+      is_installed: true,
+    })
+    .eq('agent_id', agentId);
 
-    // STEP 2: Update agent status to online
-    const { error: updateError } = await supabase
-      .from('agents')
-      .update({
-        is_online: true,
-        last_seen: new Date().toISOString()
-      })
-      .eq('id', agentId);
-
-    if (updateError) {
-      console.error(`Error updating agent ${agentId} status:`, updateError);
-      return false;
-    }
-
-    // STEP 3: Now update stats (agent record exists)
-    await updateAgentStats(agentId);
-    return true;
-
-  } catch (error) {
-    console.error(`Error handling agent connection:`, error);
-    return false;
+  if (error2){
+    console.error(`Error updating agent ${agentId} :`, error2.message);
   }
 }
 
-// Helper to update agent stats
-async function updateAgentStats(agentId, stats = {}) {
+// Helper to update system stats (CPU/RAM)
+async function updateAgentStats(agentId, stats) {
   const { error } = await supabase
     .from('agent_stats')
     .upsert(
       {
         agent_id: agentId,
-        is_installed: true,
-        cpu_usage: stats.cpu_usage || 0,
-        ram_usage: stats.ram_usage || 0,
-        storage_usage: stats.disk_usage || 0,
-        firewall_enabled: stats.firewall_enabled || false,
+        cpu_usage: stats.cpu_usage,
+        ram_usage: stats.ram_usage,
+        storage_usage: stats.disk_usage,
+        // We do NOT update firewall_enabled here to avoid overwriting the user's desired state
       },
       { onConflict: 'agent_id' }
     );
 
-  if (error) {
-    console.error(`Error updating stats for ${agentId}:`, error);
-  }
+  if (error) console.error(`Error updating stats for ${agentId}:`, error.message);
 }
 
 // Helper to create an alert
 async function createAlert(agentId, title, message, type, severity = 2) {
-    console.log(`Creating alert: ${title} for agent ${agentId}, type: ${type}`);
     const { data: alert, error } = await supabase
       .from('alerts')
       .insert({
@@ -169,31 +130,9 @@ async function createAlert(agentId, title, message, type, severity = 2) {
     }
   }
 
-async function setAgentOnline(agentId, isOnline) {
-  try {
-    const { error } = await supabase
-      .from('agents')
-      .update({ 
-        is_online: isOnline,
-        last_seen: new Date().toISOString()
-      })
-      .eq('id', agentId);
-
-    if (error) {
-      console.error(`Error updating agent online status for ${agentId}:`, error);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error(`Failed to set agent online status for ${agentId}:`, err);
-    return false;
-  }
-}
-
 module.exports = {
   supabase,
-  handleAgentConnection,
+  setAgentOnline,
   updateAgentStats,
   createAlert,
-  setAgentOnline,
 };

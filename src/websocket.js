@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const url = require('url');
-const { supabase, handleAgentConnection, updateAgentStats, createAlert, setAgentOnline } = require('./supabase');
+const { supabase, setAgentOnline, updateAgentStats, createAlert } = require('./supabase');
 const { analyzeLog } = require('./detector');
 
 // Map to store active agent connections: agent_id -> WebSocket
@@ -20,12 +20,7 @@ function setupWebSocketServer(server) {
     if (agentId) {
       console.log(`Agent connected: ${agentId}`);
       agents.set(agentId, ws);
-      const success = await handleAgentConnection(agentId);
-      if (!success) {
-        console.error(`Failed to register agent ${agentId}`);
-        ws.close();
-        return;
-      }
+      await setAgentOnline(agentId, true);
 
       ws.on('message', async (message) => {
         try {
@@ -33,9 +28,6 @@ function setupWebSocketServer(server) {
 
           // Case A: System Stats Report
           if (data.type === 'agent_report') {
-            // Mark agent as online when receiving stats
-            await setAgentOnline(agentId, true);
-            
             // Generate alert if CPU or RAM usage is critically high
             const cpuUsage = data.data.cpu_usage;
             const ramUsage = data.data.ram_usage;
@@ -72,39 +64,12 @@ function setupWebSocketServer(server) {
                 enabled: data.data.firewall_enabled
             });
           }
-          else if (data.type === 'alert') {
-            // Handle security alerts from agents
-            await createAlert(
-              agentId,
-              data.title,
-              data.message,
-              data.alert_type,
-              data.severity === 'high' ? 4 : data.severity === 'medium' ? 3 : 2
-            );
-
-            // Broadcast alert to frontend
-            broadcastToFrontends({
-              type: 'security_alert',
-              agent_id: agentId,
-              alert: data
-            });
-          }
           else if (data.type === 'firewall_update') {
             broadcastToFrontends({
                 type: 'firewall_rules_updated',
                 agent_id: agentId,
                 rules: data.rules
             });
-          }
-          else if (data.type === 'agent_heartbeat') {
-            // Handle heartbeat to keep agent online
-            await setAgentOnline(agentId, true);
-            console.log(`Heartbeat received from agent: ${agentId}`);
-          }
-          else if (data.type === 'register') {
-            // Handle agent registration
-            await setAgentOnline(agentId, true);
-            console.log(`Agent registered: ${agentId}`);
           }
           else {
             // 1. Run detection logic

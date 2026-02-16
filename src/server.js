@@ -6,56 +6,9 @@ const { supabase } = require('./supabase');
 const app = express();
 const server = http.createServer(app); // Wraps express to allow WebSockets on same port
 
-// --- INITIALIZE DATABASE ---
-// Run migrations on startup
-async function initializeDatabase() {
-  console.log('🔄 Initializing database...');
-  try {
-    // Check if tables exist, create if needed
-    const tables = ['agents', 'agent_stats', 'alerts', 'agent_users', 'monitored_files'];
-
-    for (const table of tables) {
-      try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('id')
-          .limit(1);
-
-        if (error && error.code === 'PGRST116') {
-          console.log(`Table ${table} not found, running migrations...`);
-          // Run migration script
-          const { spawn } = require('child_process');
-          const migrate = spawn('node', ['src/migrate.js'], {
-            stdio: 'inherit',
-            cwd: process.cwd()
-          });
-
-          await new Promise((resolve, reject) => {
-            migrate.on('close', (code) => {
-              if (code === 0) resolve();
-              else reject(new Error(`Migration failed with code ${code}`));
-            });
-            migrate.on('error', reject);
-          });
-          break; // Only run migration once
-        }
-      } catch (err) {
-        console.error(`Error checking table ${table}:`, err);
-      }
-    }
-
-    console.log('✅ Database initialized');
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    // Don't exit, continue with server startup
-  }
-}
-
-// Initialize database before starting server
-initializeDatabase().then(() => {
-  // --- INITIALIZE WEBSOCKET LAYER ---
-  // We pass the 'server' object so WebSockets "hitchhike" on port 10000
-  const { agents } = setupWebSocketServer(server);
+// --- INITIALIZE WEBSOCKET LAYER ---
+// We pass the 'server' object so WebSockets "hitchhike" on port 10000
+const { agents } = setupWebSocketServer(server);
 
 // --- HEALTH CHECK ENDPOINT ---
 // Render needs this to confirm your service is "Healthy"
@@ -121,8 +74,4 @@ const HOST = '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
   console.log(`HIDPS Backend and WebSocket server listening on port ${PORT}`);
-});
-}).catch((error) => {
-  console.error('Failed to initialize database:', error);
-  process.exit(1);
 });
