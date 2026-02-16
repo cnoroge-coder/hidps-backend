@@ -169,9 +169,31 @@ async function createAlert(agentId, title, message, type, severity = 2) {
     }
   }
 
+async function setAgentOnline(agentId, isOnline) {
+  try {
+    const { error } = await supabase
+      .from('agents')
+      .update({ 
+        is_online: isOnline,
+        last_seen: new Date().toISOString()
+      })
+      .eq('id', agentId);
+
+    if (error) {
+      console.error(`Error updating agent online status for ${agentId}:`, error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Failed to set agent online status for ${agentId}:`, err);
+    return false;
+  }
+}
+
 module.exports = {
   supabase,
   handleAgentConnection,
   updateAgentStats,
   createAlert,
+  setAgentOnline,
 };

@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const url = require('url');
-const { supabase, handleAgentConnection, updateAgentStats, createAlert } = require('./supabase');
+const { supabase, handleAgentConnection, updateAgentStats, createAlert, setAgentOnline } = require('./supabase');
 const { analyzeLog } = require('./detector');
 
 // Map to store active agent connections: agent_id -> WebSocket
