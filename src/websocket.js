@@ -93,6 +93,16 @@ function setupWebSocketServer(server) {
                 rules: data.rules
             });
           }
+          else if (data.type === 'agent_heartbeat') {
+            // Handle heartbeat to keep agent online
+            await setAgentOnline(agentId, true);
+            console.log(`Heartbeat received from agent: ${agentId}`);
+          }
+          else if (data.type === 'register') {
+            // Handle agent registration
+            await setAgentOnline(agentId, true);
+            console.log(`Agent registered: ${agentId}`);
+          }
           else {
             // 1. Run detection logic
             analyzeLog(agentId, data);
