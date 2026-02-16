@@ -33,6 +33,9 @@ function setupWebSocketServer(server) {
 
           // Case A: System Stats Report
           if (data.type === 'agent_report') {
+            // Mark agent as online when receiving stats
+            await setAgentOnline(agentId, true);
+            
             // Generate alert if CPU or RAM usage is critically high
             const cpuUsage = data.data.cpu_usage;
             const ramUsage = data.data.ram_usage;
